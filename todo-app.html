@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — To-Do App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── VARIABLES & RESET ─────────────────────────────────────── */
+    :root {
+      --bg:       #0e0e14;
+      --panel:    #17171f;
+      --card:     #1e1e28;
+      --border:   rgba(255,255,255,0.07);
+      --text:     #e2e2ee;
+      --muted:    #8888aa;
+      --accent:   #6c63ff;
+      --accent-h: #5a52e0;
+      --green:    #4ade80;
+      --red:      #f87171;
+      --yellow:   #facc15;
+      --radius:   14px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px 80px;
+    }
+
+    /* ─── APP WRAPPER ───────────────────────────────────────────── */
+    .app {
+      width: 100%; max-width: 660px;
+    }
+
+    /* ─── HEADER ────────────────────────────────────────────────── */
+    .app-header {
+      margin-bottom: 28px;
+    }
+    .app-title {
+      font-size: 2rem; font-weight: 700; letter-spacing: -0.5px;
+    }
+    .app-title span {
+      background: linear-gradient(135deg, #6c63ff, #c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .app-date {
+      font-size: 14px; color: var(--muted); margin-top: 4px;
+    }
+
+    /* ─── STATS BAR ─────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .stat {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 20px;
+      flex: 1; min-width: 100px; text-align: center;
+    }
+    .stat-num {
+      font-size: 1.6rem; font-weight: 700;
+      background: linear-gradient(135deg, #6c63ff, #c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── PROGRESS BAR ──────────────────────────────────────────── */
+    .progress-wrap { margin-bottom: 28px; }
+    .progress-top {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--muted); margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 6px; background: var(--card); border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), #c084fc);
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ─── INPUT AREA ────────────────────────────────────────────── */
+    .input-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .input-row {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .task-input {
+      flex: 1;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .task-input::placeholder { color: var(--muted); }
+    .task-input:focus { border-color: var(--accent); }
+
+    .priority-select {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none; cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .priority-select:focus { border-color: var(--accent); }
+
+    .add-btn {
+      background: var(--accent);
+      color: #fff; border: none;
+      border-radius: 10px; padding: 12px 20px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px; font-weight: 300;
+      cursor: pointer; transition: background 0.2s, transform 0.1s;
+      line-height: 1; flex-shrink: 0;
+    }
+    .add-btn:hover  { background: var(--accent-h); }
+    .add-btn:active { transform: scale(0.96); }
+
+    /* ─── FILTERS ───────────────────────────────────────────────── */
+    .filters {
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: var(--panel); border: 1.5px solid var(--border);
+      border-radius: 99px; padding: 7px 18px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--muted); cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active,
+    .filter-btn:hover {
+      border-color: var(--accent); color: var(--text); background: rgba(108,99,255,0.12);
+    }
+    .clear-btn {
+      margin-left: auto; background: none; border: none;
+      font-family: 'Outfit', sans-serif; font-size: 13px;
+      color: var(--red); cursor: pointer; padding: 7px 12px;
+      border-radius: 99px; transition: background 0.2s;
+    }
+    .clear-btn:hover { background: rgba(248,113,113,0.12); }
+
+    /* ─── TASK LIST ─────────────────────────────────────────────── */
+    .task-list {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    /* ─── TASK CARD ─────────────────────────────────────────────── */
+    .task-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 14px;
+      transition: all 0.25s; box-shadow: var(--shadow);
+      animation: slideIn 0.25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform:translateY(-10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .task-card:hover { border-color: rgba(108,99,255,0.3); }
+    .task-card.done  {
+      opacity: 0.55;
+      border-color: transparent;
+    }
+    .task-card.removing {
+      animation: slideOut 0.25s ease forwards;
+    }
+    @keyframes slideOut {
+      to { opacity:0; transform:translateX(40px); }
+    }
+
+    /* Checkbox */
+    .checkbox {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid var(--border); flex-shrink: 0;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; background: transparent;
+    }
+    .checkbox:hover { border-color: var(--accent); }
+    .checkbox.checked {
+      background: var(--green); border-color: var(--green);
+    }
+    .checkbox.checked::after {
+      content: '✓'; color: #000; font-size: 13px; font-weight: 700;
+    }
+
+    /* Task text */
+    .task-body { flex: 1; min-width: 0; }
+    .task-text {
+      font-size: 15px; font-weight: 500; word-break: break-word;
+      transition: all 0.2s;
+    }
+    .task-card.done .task-text {
+      text-decoration: line-through; color: var(--muted);
+    }
+    .task-meta {
+      display: flex; align-items: center; gap: 8px; margin-top: 4px;
+    }
+    .priority-pill {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+      border-radius: 99px; padding: 2px 8px;
+    }
+    .p-high   { background: rgba(248,113,113,0.15); color: var(--red); }
+    .p-medium { background: rgba(250,204,21,0.15);  color: var(--yellow); }
+    .p-low    { background: rgba(74,222,128,0.15);  color: var(--green); }
+    .task-time { font-size: 11px; color: var(--muted); }
+
+    /* Edit input */
+    .task-edit-input {
+      width: 100%; background: var(--card);
+      border: 1.5px solid var(--accent);
+      border-radius: 8px; padding: 6px 10px;
+      font-family: 'Outfit', sans-serif; font-size: 15px;
+      font-weight: 500; color: var(--text); outline: none;
+    }
+
+    /* Action buttons */
+    .task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .icon-btn {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 15px;
+      transition: all 0.2s; color: var(--muted);
+    }
+    .icon-btn:hover         { border-color: var(--accent); color: var(--text); }
+    .icon-btn.delete:hover  { border-color: var(--red); color: var(--red); }
+    .icon-btn.save:hover    { border-color: var(--green); color: var(--green); }
+
+    /* ─── EMPTY STATE ───────────────────────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted); display: none;
+    }
+    .empty-state.visible { display: block; }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 6px; color: var(--text); }
+    .empty-state p  { font-size: 14px; }
+
+    /* ─── FOOTER NOTE ───────────────────────────────────────────── */
+    .footer-note {
+      text-align: center; font-size: 12px; color: var(--muted);
+      margin-top: 40px;
+    }
+    .footer-note span {
+      display: inline-block; margin-top: 6px;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.2);
+      border-radius: 99px; padding: 4px 12px; color: var(--accent);
+    }
+
+    @media(max-width:480px) {
+      .input-row { flex-wrap: wrap; }
+      .priority-select { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="app-header">
+    <h1 class="app-title">Task<span>Flow</span></h1>
+    <p class="app-date" id="dateDisplay"></p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="statActive">0</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="statDone">0</div>
+      <div class="stat-label">Done</div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-top">
+      <span>Progress</span>
+      <span id="progressPct">0% complete</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="input-row">
+      <input
+        type="text" class="task-input" id="taskInput"
+        placeholder="What needs to be done?"
+        maxlength="120"
+      />
+      <select class="priority-select" id="prioritySelect">
+        <option value="medium">🟡 Medium</option>
+        <option value="high">🔴 High</option>
+        <option value="low">🟢 Low</option>
+      </select>
+      <button class="add-btn" id="addBtn" title="Add task">+</button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="active">Active</button>
+    <button class="filter-btn" data-filter="done">Completed</button>
+    <button class="clear-btn" id="clearDoneBtn">Clear completed</button>
+  </div>
+
+  <!-- Task List -->
+  <div class="task-list" id="taskList"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">✅</div>
+    <h3>All clear!</h3>
+    <p>No tasks here. Add something above to get started.</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-note">
+    Tasks are saved automatically
+    <br/><span>💾 Powered by localStorage</span>
+  </div>
+
+</div>
+
+<!-- ═══ JAVASCRIPT ══════════════════════════════════════════════════ -->
+<script>
+/**
+ * TaskFlow — To-Do App
+ * ─────────────────────────────────────────────────────────────────
+ * Architecture: Pure Vanilla JS with localStorage persistence.
+ *
+ * Data structure for each task (stored in localStorage as JSON):
+ * {
+ *   id:        string  — unique timestamp-based ID
+ *   text:      string  — task description
+ *   done:      boolean — completion status
+ *   priority:  string  — 'high' | 'medium' | 'low'
+ *   createdAt: string  — ISO date string
+ * }
+ */
+
+  /* ── CONSTANTS ────────────────────────────────────────────────── */
+  const STORAGE_KEY = 'taskflow-tasks-v1'; // localStorage key
+
+  /* ── STATE ────────────────────────────────────────────────────── */
+  let tasks        = [];   // In-memory task array
+  let activeFilter = 'all'; // Current filter
+
+  /* ── DOM REFERENCES ───────────────────────────────────────────── */
+  const taskInput      = document.getElementById('taskInput');
+  const prioritySelect = document.getElementById('prioritySelect');
+  const addBtn         = document.getElementById('addBtn');
+  const taskList       = document.getElementById('taskList');
+  const emptyState     = document.getElementById('emptyState');
+  const clearDoneBtn   = document.getElementById('clearDoneBtn');
+  const statTotal      = document.getElementById('statTotal');
+  const statActive     = document.getElementById('statActive');
+  const statDone       = document.getElementById('statDone');
+  const progressFill   = document.getElementById('progressFill');
+  const progressPct    = document.getElementById('progressPct');
+
+  /* ════════════════════════════════════════════════════════════════
+     localStorage FUNCTIONS
+     ════════════════════════════════════════════════════════════════ */
+
+  /**
+   * loadTasks()
+   * Reads the JSON string from localStorage, parses it, and
+   * populates the `tasks` array. Falls back to [] if nothing saved.
+   */
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      tasks = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      // Corrupted data guard
+      console.warn('Could not parse tasks from localStorage:', e);
+      tasks = [];
+    }
+  }
+
+  /**
+   * saveTasks()
+   * Serialises the current `tasks` array to JSON and writes it to
+   * localStorage under STORAGE_KEY. Called after every mutation.
+   */
+  function saveTasks() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     TASK CRUD OPERATIONS
+     ════════════════════════════════════════════════════════════════ */
+
+  /**
+   * addTask()
+   * Creates a new task object, pushes it into the array,
+   * persists to localStorage, and re-renders the list.
+   */
+  function addTask() {
+    const text = taskInput.value.trim();
+    if (!text) {
+      taskInput.focus();
+      taskInput.style.borderColor = 'var(--red)';
+      setTimeout(() => taskInput.style.borderColor = '', 800);
+      return;
+    }
+
+    const newTask = {
+      id:        Date.now().toString(),  // unique ID using timestamp
+      text:      text,
+      done:      false,
+      priority:  prioritySelect.value,
+      createdAt: new Date().toISOString()
+    };
+
+    tasks.unshift(newTask); // add to front so newest appears first
+    saveTasks();
+    render();
+
+    // Reset input
+    taskInput.value = '';
+    prioritySelect.value = 'medium';
+    taskInput.focus();
+  }
+
+  /**
+   * toggleTask(id)
+   * Flips the `done` boolean on the task with the given id,
+   * saves, and re-renders.
+   */
+  function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.done = !task.done;
+      saveTasks();
+      render();
+    }
+  }
+
+  /**
+   * deleteTask(id)
+   * Animates the card out, then removes the task from the array
+   * and localStorage.
+   */
+  function deleteTask(id) {
+    const card = document.querySelector(`[data-id="${id}"]`);
+    if (card) {
+      card.classList.add('removing');
+      card.addEventListener('animationend', () => {
+        tasks = tasks.filter(t => t.id !== id);
+        saveTasks();
+        render();
+      }, { once: true });
+    }
+  }
+
+  /**
+   * startEdit(id)
+   * Replaces the task's text span with an <input> for inline editing.
+   */
+  function startEdit(id) {
+    const task    = tasks.find(t => t.id === id);
+    if (!task || task.done) return;
+    const card    = document.querySelector(`[data-id="${id}"]`);
+    const body    = card.querySelector('.task-body');
+    const textEl  = card.querySelector('.task-text');
+    const editBtn = card.querySelector('.edit-btn');
+    const saveBtn = card.querySelector('.save-btn');
+
+    // Swap text → input
+    const input = document.createElement('input');
+    input.className   = 'task-edit-input';
+    input.value       = task.text;
+    input.maxLength   = 120;
+    body.replaceChild(input, textEl);
+
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'flex';
+    input.focus();
+    input.select();
+
+    // Save on Enter key
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveEdit(id);
+      if (e.key === 'Escape') render(); // cancel
+    });
+  }
+
+  /**
+   * saveEdit(id)
+   * Reads the edited text from the inline input, updates the task,
+   * saves to localStorage, and re-renders.
+   */
+  function saveEdit(id) {
+    const card  = document.querySelector(`[data-id="${id}"]`);
+    const input = card ? card.querySelector('.task-edit-input') : null;
+    if (!input) return;
+
+    const newText = input.value.trim();
+    if (!newText) return;
+
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.text = newText;
+      saveTasks();
+      render();
+    }
+  }
+
+  /**
+   * clearCompleted()
+   * Removes all tasks where done === true, saves, re-renders.
+   */
+  function clearCompleted() {
+    tasks = tasks.filter(t => !t.done);
+    saveTasks();
+    render();
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     RENDER
+     ════════════════════════════════════════════════════════════════ */
+
+  /**
+   * getFilteredTasks()
+   * Returns a subset of the tasks array based on the active filter.
+   */
+  function getFilteredTasks() {
+    switch (activeFilter) {
+      case 'active': return tasks.filter(t => !t.done);
+      case 'done':   return tasks.filter(t =>  t.done);
+      default:       return tasks;
+    }
+  }
+
+  /**
+   * buildTaskCard(task)
+   * Returns an HTML string for a single task card.
+   */
+  function buildTaskCard(task) {
+    const priorityLabel = { high:'🔴 High', medium:'🟡 Medium', low:'🟢 Low' };
+    const priorityClass = { high:'p-high', medium:'p-medium', low:'p-low' };
+    const timeStr = new Date(task.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+
+    return `
+      <div class="task-card ${task.done ? 'done' : ''}" data-id="${task.id}">
+        <!-- Checkbox -->
+        <div class="checkbox ${task.done ? 'checked' : ''}"
+             onclick="toggleTask('${task.id}')"
+             title="${task.done ? 'Mark active' : 'Mark complete'}">
+        </div>
+
+        <!-- Body -->
+        <div class="task-body">
+          <div class="task-text">${escapeHtml(task.text)}</div>
+          <div class="task-meta">
+            <span class="priority-pill ${priorityClass[task.priority] || 'p-medium'}">
+              ${priorityLabel[task.priority] || 'Medium'}
+            </span>
+            <span class="task-time">Added ${timeStr}</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="task-actions">
+          <button class="icon-btn edit-btn ${task.done ? 'hidden' : ''}"
+                  onclick="startEdit('${task.id}')"
+                  title="Edit task"
+                  ${task.done ? 'style="display:none"' : ''}>✏️</button>
+          <button class="icon-btn save save-btn"
+                  onclick="saveEdit('${task.id}')"
+                  title="Save edit"
+                  style="display:none">💾</button>
+          <button class="icon-btn delete"
+                  onclick="deleteTask('${task.id}')"
+                  title="Delete task">🗑️</button>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * render()
+   * Central render function. Updates the DOM based on current state.
+   * Called after every data mutation.
+   */
+  function render() {
+    const filtered = getFilteredTasks();
+
+    // Build task cards
+    taskList.innerHTML = filtered.map(buildTaskCard).join('');
+
+    // Empty state
+    emptyState.classList.toggle('visible', filtered.length === 0);
+
+    // Stats
+    const total  = tasks.length;
+    const done   = tasks.filter(t => t.done).length;
+    const active = total - done;
+    statTotal.textContent  = total;
+    statActive.textContent = active;
+    statDone.textContent   = done;
+
+    // Progress bar
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+    progressFill.style.width = `${pct}%`;
+    progressPct.textContent  = `${pct}% complete`;
+  }
+
+  /* ── HELPER: Escape HTML to prevent XSS ───────────────────────── */
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
+  }
+
+  /* ── DATE DISPLAY ─────────────────────────────────────────────── */
+  function showDate() {
+    document.getElementById('dateDisplay').textContent =
+      new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  /* ── EVENT LISTENERS ──────────────────────────────────────────── */
+
+  // Add task on button click
+  addBtn.addEventListener('click', addTask);
+
+  // Add task on Enter key in input field
+  taskInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  // Clear completed tasks
+  clearDoneBtn.addEventListener('click', clearCompleted);
+
+  /* ── INITIALISE ───────────────────────────────────────────────── */
+  showDate();
+  loadTasks();  // Read from localStorage first
+  render();     // Then paint the UI
+</script>
+</body>
+</html>
